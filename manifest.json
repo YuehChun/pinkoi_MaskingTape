@@ -1,0 +1,28 @@
+{
+	"manifest_version": 2,
+	"name": "pinkoi - 紙膠帶 - YCTsai",
+	"description": "Pinkoi 紙膠帶商品瀏覽Google Chrome套件, Icon Form Icons8.",
+	"version": "1.0",
+	"permissions": [
+		"storage"
+	],
+	"icons": { 
+		"50": "img/Bird-50.png",
+		"100": "img/Bird-100.png" 
+	},
+	"browser_action": {
+		"default_icon": {                    
+			"19": "img/Bird-50.png",          
+			"38": "img/Bird-50.png"          
+		},
+		"default_popup": "pinkoi.html"
+	},
+	"content_security_policy": "script-src 'self' https://ssl.google-analytics.com; object-src 'self'",
+	"web_accessible_resources": [
+		"img/Bird-100.png"
+	],
+	"content_scripts": [{
+		"matches" : ["http://*/*" , "https://*/*"],
+		"js": ["js/jquery-2.0.3.min.js"]
+	}]
+}
