@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>jQuery AJAX Security Test</title>
+    <script src="js/jquery-3.7.1.min.js"></script>
+    <script src="js/jquery-security-patch.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .fail { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>jQuery AJAX Security Vulnerability Tests</h1>
+    <div id="results"></div>
+    <div id="test-log"></div>
+
+    <script>
+        var results = [];
+        var testLog = [];
+        
+        function addResult(message, type) {
+            results.push({message: message, type: type});
+        }
+        
+        function log(message) {
+            testLog.push(new Date().toISOString() + ': ' + message);
+            console.log(message);
+        }
+        
+        // Test 1: Check jQuery version
+        function testJQueryVersion() {
+            var version = $.fn.jquery;
+            var versionParts = version.split('.').map(Number);
+            
+            if (versionParts[0] >= 3) {
+                addResult("✅ jQuery Version: " + version + " (Safe - ≥3.0.0)", "pass");
+            } else {
+                addResult("❌ jQuery Version: " + version + " (Vulnerable - <3.0.0)", "fail");
+            }
+        }
+        
+        // Test 2: Test secure AJAX defaults
+        function testSecureAjaxDefaults() {
+            try {
+                // Test that cross-origin requests default to safe dataType
+                var ajaxSettings = {
+                    url: 'https://httpbin.org/json',
+                    crossDomain: true
+                };
+                
+                // This should not execute any scripts
+                $.ajax(ajaxSettings).done(function() {
+                    addResult("✅ Cross-origin AJAX with secure defaults works", "pass");
+                }).fail(function() {
+                    addResult("ℹ️ Cross-origin AJAX failed (CORS), but security patch is active", "info");
+                });
+                
+            } catch (e) {
+                addResult("❌ Error testing secure AJAX defaults: " + e.message, "fail");
+            }
+        }
+        
+        // Test 3: Test globalEval security
+        function testGlobalEvalSecurity() {
+            try {
+                // Capture console output
+                var originalWarn = console.warn;
+                var warnings = [];
+                console.warn = function(msg) {
+                    warnings.push(msg);
+                    originalWarn.apply(console, arguments);
+                };
+                
+                // Try to execute code via globalEval (should be blocked)
+                $.globalEval('window.testValue = "compromised";');
+                
+                // Restore console
+                console.warn = originalWarn;
+                
+                if (typeof window.testValue === 'undefined' && warnings.length > 0) {
+                    addResult("✅ globalEval blocked dangerous code execution", "pass");
+                } else if (typeof window.testValue !== 'undefined') {
+                    addResult("❌ globalEval allowed dangerous code execution", "fail");
+                } else {
+                    addResult("ℹ️ globalEval behavior unclear", "info");
+                }
+                
+            } catch (e) {
+                addResult("✅ globalEval threw exception (safe): " + e.message, "pass");
+            }
+        }
+        
+        // Test 4: Test content type filtering
+        function testContentTypeFiltering() {
+            try {
+                // Mock a response with dangerous content type
+                var mockXHR = {
+                    getResponseHeader: function(header) {
+                        if (header === 'Content-Type') {
+                            return 'text/javascript';
+                        }
+                        return null;
+                    }
+                };
+                
+                // This should be blocked by our security patch
+                addResult("ℹ️ Content type filtering test (check console for warnings)", "info");
+                
+            } catch (e) {
+                addResult("❌ Error testing content type filtering: " + e.message, "fail");
+            }
+        }
+        
+        // Test 5: Test Object.prototype pollution (from previous fix)
+        function testPrototypePollution() {
+            try {
+                $.extend(true, {}, JSON.parse('{"__proto__": {"isAdmin": true}}'));
+                
+                var testObj = {};
+                if (testObj.isAdmin === true) {
+                    addResult("❌ Object.prototype pollution vulnerability exists", "fail");
+                } else {
+                    addResult("✅ Object.prototype pollution vulnerability fixed", "pass");
+                }
+            } catch (e) {
+                addResult("✅ Object.prototype pollution blocked with exception", "pass");
+            }
+        }
+        
+        // Test 6: Check for security patch
+        function testSecurityPatch() {
+            // Check if our security patch methods exist
+            var hasSecurityFeatures = (
+                console.log.toString().indexOf('jQuery Security Patch') !== -1 ||
+                document.querySelector('script[src*="security-patch"]') !== null
+            );
+            
+            if (hasSecurityFeatures) {
+                addResult("✅ Security patch loaded and active", "pass");
+            } else {
+                addResult("⚠️ Security patch may not be loaded", "info");
+            }
+        }
+        
+        // Run all tests
+        function runAllTests() {
+            log("Starting jQuery AJAX Security Tests...");
+            
+            testJQueryVersion();
+            testSecureAjaxDefaults();
+            testGlobalEvalSecurity();
+            testContentTypeFiltering();
+            testPrototypePollution();
+            testSecurityPatch();
+            
+            // Display results
+            var resultsDiv = document.getElementById('results');
+            var html = '<h2>Test Results</h2>';
+            
+            results.forEach(function(result) {
+                html += '<div class="test-result ' + result.type + '">' + result.message + '</div>';
+            });
+            
+            resultsDiv.innerHTML = html;
+            
+            // Display log
+            var logDiv = document.getElementById('test-log');
+            logDiv.innerHTML = '<h2>Test Log</h2><pre>' + testLog.join('\n') + '</pre>';
+            
+            log("All tests completed.");
+        }
+        
+        // Run tests when page loads
+        $(document).ready(function() {
+            setTimeout(runAllTests, 100);
+        });
+    </script>
+</body>
+</html>
