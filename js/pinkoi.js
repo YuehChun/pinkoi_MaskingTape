@@ -2,7 +2,14 @@ document.addEventListener('DOMContentLoaded', function() {
   var itemMap = {};
   var preItemMap = {};
   for(page = 1 ; page <= 100 ; page++ ){
-    $.get("http://www.pinkoi.com/browse/紙膠帶-文具卡片?category=3&subcategory=310&page="+page, function(result){
+    // Secure AJAX request with explicit dataType and security options
+    $.ajax({
+      url: "http://www.pinkoi.com/browse/紙膠帶-文具卡片?category=3&subcategory=310&page="+page,
+      type: "GET",
+      dataType: "html", // Explicitly specify dataType to prevent script execution
+      cache: false,
+      crossDomain: true,
+      success: function(result){
         parser = new DOMParser();
         xmlDoc = parser.parseFromString(result,"text/html");
         x = xmlDoc.getElementsByClassName("item g-fav-wrap");
@@ -53,6 +60,12 @@ document.addEventListener('DOMContentLoaded', function() {
           SortMapFunc(itemMap);
           page=999;
         }
+      },
+      error: function(xhr, status, error) {
+        console.error("AJAX request failed:", status, error);
+        // Stop the loop on error to prevent infinite failed requests
+        page = 999;
+      }
     });
   }
 });

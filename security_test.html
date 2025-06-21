@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>jQuery Security Test</title>
+    <script src="js/jquery-3.7.1.min.js"></script>
+</head>
+<body>
+    <h1>jQuery Object.prototype Pollution Test</h1>
+    <div id="results"></div>
+
+    <script>
+        // Test for the vulnerability
+        function testVulnerability() {
+            var results = [];
+            
+            // Test 1: Try to pollute Object.prototype
+            try {
+                $.extend(true, {}, JSON.parse('{"__proto__": {"isAdmin": true}}'));
+                
+                // Check if pollution occurred
+                var testObj = {};
+                if (testObj.isAdmin === true) {
+                    results.push("❌ VULNERABLE: Object.prototype pollution successful");
+                } else {
+                    results.push("✅ SECURE: Object.prototype pollution prevented");
+                }
+            } catch (e) {
+                results.push("✅ SECURE: Exception thrown during extend operation");
+            }
+            
+            // Test 2: Verify jQuery is working normally
+            try {
+                var normalExtend = $.extend(true, {a: 1}, {b: 2});
+                if (normalExtend.a === 1 && normalExtend.b === 2) {
+                    results.push("✅ FUNCTIONAL: jQuery.extend() works normally");
+                } else {
+                    results.push("❌ ERROR: jQuery.extend() not working properly");
+                }
+            } catch (e) {
+                results.push("❌ ERROR: jQuery.extend() throwing exception: " + e.message);
+            }
+            
+            // Test 3: Check jQuery version
+            results.push("📋 jQuery Version: " + $.fn.jquery);
+            
+            // Display results
+            document.getElementById('results').innerHTML = results.join('<br>');
+        }
+        
+        // Run test when page loads
+        $(document).ready(function() {
+            testVulnerability();
+        });
+    </script>
+</body>
+</html>
